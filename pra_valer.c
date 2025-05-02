@@ -14,7 +14,9 @@
 
 #define MAX_PLANES 20
 #define SPEED 0.05
-#define CRIT_DIST 0.1 
+#define LANDING 0.5
+#define CRIT_DIST 0.1
+#define DIAG_SPEED 0.07
 
 
 /*---- Pistas ----*/
@@ -31,8 +33,8 @@ typedef struct
     int runway; // Pista preferida para pouso
     int delay; // Tempo de atraso em segundos
     float x, y; // Coordenadas X e Y
-    int status // 1 = Voando, 2 = Pousou, 3 = morto
-    time_t time;
+    int status;
+     // 1 = Voando, 2 = Pousou, 3 = morto
 } Plane;
 
 typedef struct PlanesQueue {
@@ -50,8 +52,8 @@ typedef struct SharedData {
 
 /*---- Globals ----*/
 char entrySide[2] = {'E','W'};
-int RunwaysEast[2] = {RUNWAY_E_03, RUNWAY_E_06};
-int RunwaysWest[2] = {RUNWAY_W_18, RUNWAY_W_27};
+int runwaysEast[2] = {RUNWAY_E_03, RUNWAY_E_06};
+int runwaysWest[2] = {RUNWAY_W_18, RUNWAY_W_27};
 pid_t planes[MAX_PLANES];
 int currentPlane = 0;
 int shmid;
@@ -59,6 +61,22 @@ int semid;
 time_t currentTime;
 int execTime[MAX_PLANES] = {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};
 int index;
+
+
+/*ESSA FUNÇÃO É O PASSO INICIAL PARA TRATAR DA COLISÃO DE AVIÕES. NO ENUNCIADO FALA ""*/
+
+float calcule_time_till_landing(float x, float y){
+    float dx = x - 0.5;
+    float dy = x - 0.5;
+
+    float dist = sqrt(dx*dx + dy*dy);
+
+    return dist/DIAG_SPEED;
+}
+
+
+
+
 
 
 /*---- Funções de Criação de Aeronave ----*/
