@@ -16,7 +16,7 @@
 #include <sys/stat.h>   // Permissões de arquivos
 
 // Definições de constantes
-#define MAX_PLANES 20    // Número máximo de aviões simultâneos
+#define MAX_PLANES 5    // Número máximo de aviões simultâneos
 #define SPEED 0.05      // Velocidade de deslocamento dos aviões
 #define CRIT_DIST 0.1   // Distância crítica para risco de colisão
 
@@ -70,8 +70,12 @@ int currentPlane = 0;                           // Índice do avião atual
 int shmid;                                      // ID da memória compartilhada
 int semid;                                      // ID do semáforo
 time_t currentTime;                             // Tempo atual
-int execTime[MAX_PLANES] = {3, 4, 5, 6, 7 ,8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};   // Tempos de execução (não usado diretamente)
+int execTime[MAX_PLANES];// = {3, 4, 5, 6, 7 ,8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};   // Tempos de execução (não usado diretamente)
 int pIndex;                                     // Índice auxiliar
+
+
+
+
 
 /*---- Funções auxiliares para criação de aeronaves ----*/
 
@@ -297,6 +301,11 @@ void remove_plane_by_pid(PlanesQueue *queue, pid_t pid) {
 int main(void)
 {
     signal(SIGINT, signal_handler); // Captura Ctrl+C para liberar recursos
+    //Gerando a lista de execTime de modo dinamico pra mudar conforme o N
+    for (int i = 0; i < MAX_PLANES; i++) {
+        execTime[i] = i+3;
+        //printf("execTime[%d] = %d\n", i, execTime[i]);
+    }
 
 
     // Cria memória compartilhada
@@ -362,12 +371,29 @@ int main(void)
                 // Atualiza coordenada X conforme lado de entrada
                 if (plane.side == 'E') {
                     plane.x += SPEED;
+                    if (plane.x > 0.5) plane.x = 0.5; // Não ultrapassa o centro
                 } else {
                     plane.x -= SPEED;
+                    if (plane.x < 0.5) plane.x = 0.5;
+                }
+
+                //Atualiza coordenada Y (simula movimento)
+                if (fabs(plane.y - 0.5) > SPEED) {
+                    if (plane.y < 0.5) {
+                        plane.y += SPEED;
+                        if (plane.y > 0.5) plane.y = 0.5; // Não ultrapassa o centro
+                    }
+                    else {
+                        plane.y -= SPEED;
+                        if (plane.y < 0.5) plane.y = 0.5;
+                    }
+                }
+                else {
+                    plane.y = 0.5; // Chegou ao centro
                 }
 
                 // Verifica se chegou ao destino (pousou)
-                if ((plane.side == 'E' && plane.x >= 1.0) || (plane.side == 'W' && plane.x <= 0.0)) {
+                if ((plane.side == 'E' && plane.x >= 0.5) || (plane.side == 'W' && plane.x <= 0.5)) {
                     plane.status = 2; // pousou
                     printf("Avião %d pousou na pista %d\n", plane.pid, plane.runway);
 
