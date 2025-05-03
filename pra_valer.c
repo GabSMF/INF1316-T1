@@ -16,7 +16,7 @@
 #include <sys/stat.h>   // Permissões de arquivos
 
 // Definições de constantes
-#define MAX_PLANES 5    // Número máximo de aviões simultâneos
+#define MAX_PLANES 20    // Número máximo de aviões simultâneos
 #define SPEED 0.05      // Velocidade de deslocamento dos aviões
 #define CRIT_DIST 0.1   // Distância crítica para risco de colisão
 
@@ -70,7 +70,7 @@ int currentPlane = 0;                           // Índice do avião atual
 int shmid;                                      // ID da memória compartilhada
 int semid;                                      // ID do semáforo
 time_t currentTime;                             // Tempo atual
-int execTime[MAX_PLANES] = {3, 4, 5, 6, 7 };    // Tempos de execução (não usado diretamente)
+int execTime[MAX_PLANES] = {3, 4, 5, 6, 7 ,8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};   // Tempos de execução (não usado diretamente)
 int pIndex;                                     // Índice auxiliar
 
 /*---- Funções auxiliares para criação de aeronaves ----*/
@@ -198,15 +198,16 @@ int search_plane(PlanesQueue* queue, pid_t pid) {
 // Mostra a fila de aviões na tela
 void show_queue(PlanesQueue* queue, time_t initTime) {
     printf("===================================\n");
-    printf("Fila de aviões bloqueados (Tempo atual: %lds):\n", time(NULL) - initTime);
+    printf("Fila de aviões (Tempo atual: %lds):\n", time(NULL) - initTime);
     if (queue->size == 0) {
         printf("Fila vazia\n");
+        exit(0);
     } else {
         for (int i = 0; i < queue->size; i++) {
             int exibitIndex = (queue->first + i) % MAX_PLANES;
-            printf("Posicao %d: Processo PID: %d | Tempo na fila: %lds\n",
+            printf("Avião %d: Processo PID: %d | Tempo na fila: %lds - Posição (%.2f, %.2f)\n",
                    exibitIndex, queue->queue[exibitIndex].pid,
-                   time(NULL) - queue->queue[exibitIndex].time);
+                   time(NULL) - queue->queue[exibitIndex].time, queue->queue[exibitIndex].x , queue->queue[exibitIndex].y);
         }
     }
     printf("===================================\n");
@@ -297,6 +298,7 @@ int main(void)
 {
     signal(SIGINT, signal_handler); // Captura Ctrl+C para liberar recursos
 
+
     // Cria memória compartilhada
     shmid = shmget(IPC_PRIVATE, sizeof(SharedData), IPC_CREAT | S_IRUSR | S_IWUSR);
     if (shmid < 0) {
@@ -334,6 +336,7 @@ int main(void)
 
         if (pid == 0) {
             // Processo filho (avião)
+            srand(time(NULL) ^ getpid()); //Gera a aleatoriedade
             Plane plane = new_plane();      // Cria avião com dados aleatórios
             plane.pid = getpid();           // Define PID do processo
             plane.time = time(NULL);        // Marca tempo de entrada
