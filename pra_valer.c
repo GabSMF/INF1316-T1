@@ -66,12 +66,9 @@ char entrySide[2] = {'E','W'};                  // Lados possíveis de entrada
 int RunwaysEast[2] = {RUNWAY_E_03, RUNWAY_E_06}; // Pistas do lado leste
 int RunwaysWest[2] = {RUNWAY_W_18, RUNWAY_W_27}; // Pistas do lado oeste
 pid_t planes[MAX_PLANES];                       // PIDs dos aviões
-int currentPlane = 0;                           // Índice do avião atual
 int shmid;                                      // ID da memória compartilhada
 int semid;                                      // ID do semáforo
-time_t currentTime;                             // Tempo atual
-int execTime[MAX_PLANES];// = {3, 4, 5, 6, 7 ,8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};   // Tempos de execução (não usado diretamente)
-int pIndex;                                     // Índice auxiliar
+
 
 
 
@@ -129,6 +126,7 @@ void initialize_wait_queue(WaitQueue* queue) {
 void enqueue_wait(WaitQueue* queue, pid_t pid) {
     if (queue->size < MAX_PLANES) {
         queue->last = (queue->last + 1) % MAX_PLANES;
+        // Adiciona PID na fila
         queue->pids[queue->last] = pid;
         queue->size++;
     }
@@ -138,6 +136,8 @@ void enqueue_wait(WaitQueue* queue, pid_t pid) {
 pid_t dequeue_wait(WaitQueue* queue) {
     if (queue->size == 0) return -1;
     pid_t pid = queue->pids[queue->first];
+    //tratamento de erros - %MAX_PLANES impede que first seja maior que o tamanho da fila
+    //Mesmo que o size da fila não possa ser maior que MAX_PLANES
     queue->first = (queue->first + 1) % MAX_PLANES;
     queue->size--;
     return pid;
@@ -162,6 +162,9 @@ void initialize_queue(PlanesQueue* queue) {
 
 // Enfileira avião na fila de aviões (com proteção de semáforo)
 void queue_planes(PlanesQueue* queue, pid_t pid, Plane plane) {
+    //Uso do semáforo para proteger a fila
+    //no semaforo de indice 0, aplique -1
+    //Garante que apenas um processo acesse a fila por vez
     struct sembuf operacao = {0, -1, 0};
     semop(semid, &operacao, 1); // Bloqueia o semáforo
     if (queue->size < MAX_PLANES) {
@@ -176,17 +179,6 @@ void queue_planes(PlanesQueue* queue, pid_t pid, Plane plane) {
     semop(semid, &operacao, 1); // Libera o semáforo
 }
 
-// Remove avião da fila de aviões e retorna por referência
-int dequeue_planes(PlanesQueue* queue, Plane* plane) {
-    if(queue->size == 0){
-        printf("Fila vazia, não foi possível desenfileirar o avião\n");
-        return 0;
-    }
-    *plane = queue->queue[queue->first];
-    queue->first = (queue->first + 1) % MAX_PLANES;
-    queue->size--;
-    return 1;
-}
 
 // Busca índice do avião pelo PID na fila de aviões
 int search_plane(PlanesQueue* queue, pid_t pid) {
@@ -217,29 +209,8 @@ void show_queue(PlanesQueue* queue, time_t initTime) {
     printf("===================================\n");
 }
 
-// Busca índice do avião pelo PID no vetor global planes[]
-int get_index(pid_t pid) {
-    for(int i = 0; i < MAX_PLANES; i++){
-        if(planes[i] == pid){
-            return i;
-        }
-    }
-    return -1;
-}
 
-// Retorna o próximo avião (PID) na lista circular, que não está na fila de aviões
-pid_t get_next_plane(PlanesQueue* queue, pid_t pid) {
-    int currentIndex = get_index(pid);
-    int nextIndex;
-    for(int i = 1; i<=MAX_PLANES; i++){
-        nextIndex = (currentIndex + i) % MAX_PLANES;
-        pid_t candidatePid = planes[nextIndex];
-        if (!search_plane(queue, candidatePid)){
-            return candidatePid;
-        }
-    }
-    return -1;
-}
+
 
 // Cria um novo avião com dados aleatórios
 Plane new_plane() {
@@ -302,10 +273,6 @@ int main(void)
 {
     signal(SIGINT, signal_handler); // Captura Ctrl+C para liberar recursos
     //Gerando a lista de execTime de modo dinamico pra mudar conforme o N
-    for (int i = 0; i < MAX_PLANES; i++) {
-        execTime[i] = i+3;
-        //printf("execTime[%d] = %d\n", i, execTime[i]);
-    }
 
 
     // Cria memória compartilhada
