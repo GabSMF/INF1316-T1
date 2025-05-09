@@ -270,6 +270,7 @@ void escalonador() {
     int atual = 0;
     while (1) {
         if (!espaco->escalonamento_ativo) {
+            printf("\n[Controlador] Simulação pausada. Pressione 'r' para retomar.\n");
             sleep(1);
             continue;
         }
@@ -285,6 +286,7 @@ void escalonador() {
         if (ativos == 0) {
             printf("\n[Controlador] Todos os aviões pousaram ou foram abortados. Encerrando simulação.\n");
             break;
+            exit(0);
         }
 
         if (espaco->avioes[atual].ativo) {
@@ -296,7 +298,33 @@ void escalonador() {
     }
 }
 
+void start(int sig) {
+    printf("\n[Controlador] Iniciando simulação...\n");
+    espaco->escalonamento_ativo = 1;
+}
+
+void pausar(int sig) {
+    printf("\n[Controlador] Pausando simulação...\n");
+    espaco->escalonamento_ativo = 0;
+}
+
+void quitar(int sig) {
+    printf("\n[Controlador] Encerrando simulação...\n");
+    for (int i = 0; i < espaco->n_avioes; i++) {
+        if (espaco->avioes[i].ativo) kill(espaco->avioes[i].pid, SIGKILL);
+    }
+    exit(0);
+}
+
+
 int main(int argc, char *argv[]) {
+
+    //Sinais - Pegando ctrl c, / e z
+    signal(SIGINT, start);
+    signal(SIGQUIT, quitar);
+    signal(SIGTSTP, pausar);
+
+
     if (argc != 2) {
         fprintf(stderr, "Uso: %s <numero_de_avioes>\n", argv[0]);
         exit(1);
@@ -305,6 +333,8 @@ int main(int argc, char *argv[]) {
     n_processos = atoi(argv[1]);
     if (n_processos > MAX_AVIOES) n_processos = MAX_AVIOES;
 
+
+    //Cria memória compartilhada
     shmid = shmget(IPC_PRIVATE, sizeof(EspacoAereo), IPC_CREAT | 0666);
     espaco = (EspacoAereo *)shmat(shmid, NULL, 0);
 
