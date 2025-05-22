@@ -64,7 +64,6 @@ void mata_aviao(int idx);
 void resolve_conflito(int i, int j);
 void escalonador(void);
 void mata_aviao(int idx);
-
 void sigusr1_handler(int sig);
 void sigusr2_handler(int sig);
 void sigint_handler(int sig);
@@ -72,9 +71,7 @@ void sigtstp_handler(int sig);
 void sigquit_handler_menu(int sig);
 void sigusr1_handler_menu(int sig);
 void sigusr2_handler_menu(int sig);
-
 void interface_sinais();
-
 void movimento(int idx);
 void cria_avioes(int n);
 void resolve_conflito(int i, int j);
@@ -180,7 +177,6 @@ int pista_alternativa(Aviao a)
 // da SIGKILL em um avião
 void mata_aviao(int idx)
 {
-
     if (!espaco->avioes[idx].ativo)
         return;          // Evita que um processo passe aqui 2 vezes
     espaco->abortados++; // incrementa contador de abortados
